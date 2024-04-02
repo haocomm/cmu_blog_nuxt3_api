@@ -37,17 +37,16 @@ const findByResetPasswordToken = async (passwordResetToken, res, include = []) =
   return data;
 };
 const findByEmail = async (email, res, include = []) => {
-  const where = {
-    email,
-  };
   const data = await Member.findOne({
-    where,
+    where: {
+      email,
+    },
     include,
   });
   return data;
 };
 
-const createMember = async (data, res) => {
+const createMember = async (data, next) => {
   try {
     return await db.sequelize.transaction((t) => {
       return Member.create(data, {
@@ -55,12 +54,11 @@ const createMember = async (data, res) => {
       });
     });
   } catch (e) {
-    return res.status(500).json({
-      message: 'Cannot store data to database.' + e,
-    });
+    e.message = 'Error: ' + e;
+    next(e);
   }
 };
-const updateMember = async (id, data, res) => {
+const updateMember = async (id, data, next) => {
   try {
     return await db.sequelize.transaction((t) => {
       return Member.update(
@@ -76,12 +74,11 @@ const updateMember = async (id, data, res) => {
       );
     });
   } catch (e) {
-    return res.status(500).json({
-      message: 'Cannot store data to database.' + e,
-    });
+    e.message = 'Error: ' + e;
+    next(e);
   }
 };
-const newAccessToken = async (memberId, req, res) => {
+const newAccessToken = async (memberId, req, next) => {
   try {
     return await db.sequelize.transaction((t) => {
       return MemberAccessToken.create(
@@ -95,31 +92,16 @@ const newAccessToken = async (memberId, req, res) => {
       );
     });
   } catch (e) {
-    return res.status(500).json({
-      message: 'Cannot store data to database.' + e,
-    });
-  }
-};
-
-const sendMail = async (to, subject, html) => {
-  try {
-    const mail = await mailer.sendMail({
-      from: `${process.env.APP_NAME} <${process.env.APP_EMAIL}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log(mail.messageId);
-  } catch (err) {
-    console.log(err);
+    e.message = 'Error: ' + e;
+    next(e);
   }
 };
 
 module.exports = {
-  signup: async (req, res) => {
+  signup: async (req, res,next) => {
     const data = req.body;
     data.password_created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    const newData = await createMember(data, res);
+    const newData = await createMember(data, next);
     await MailVerify(newData.email, `${newData.firstname} ${newData.lastname}`, newData.verify_token, `${process.env.BASE_URL}/verify-email/`);
     return res.status(201).json(newData);
   },
@@ -149,7 +131,7 @@ module.exports = {
       const updateData = {
         verify_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
       };
-      await updateMember(data.id, updateData, res);
+      await updateMember(data.id, updateData, next);
       return res.status(204).send();
     } catch (e) {
       e.message = 'Error: ' + e;
@@ -169,7 +151,7 @@ module.exports = {
         password_reset_token: passwordResetToken,
         password_reset_expire_at: dayjs().add(15, 'minutes').format('YYYY-MM-DD HH:mm:ss'),
       };
-      await updateMember(data.id, updateData, res);
+      await updateMember(data.id, updateData, next);
       await MailResetPassword(data.email, passwordResetToken, `${process.env.BASE_URL}/reset-password/`);
       return res.status(204).send();
     } catch (e) {
@@ -212,7 +194,7 @@ module.exports = {
       if (!data.verify_at) {
         updateData.verify_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
       }
-      await updateMember(data.id, updateData, res);
+      await updateMember(data.id, updateData, next);
       return res.status(204).send();
     } catch (e) {
       e.message = 'Error: ' + e;
@@ -232,9 +214,9 @@ module.exports = {
           refresh_token: newRefreshToken,
           refresh_token_expire_at: dayjs().add(10, 'hours').format('YYYY-MM-DD HH:mm:ss'),
         };
-        await updateMember(req.user.id, updateData, res);
+        await updateMember(req.user.id, updateData, next);
 
-        const accessToken = await newAccessToken(req.user.id, req, res);
+        const accessToken = await newAccessToken(req.user.id, req, next);
         return res.status(200).json({
           access_token: accessToken.access_token,
           refresh_token: newRefreshToken,
@@ -259,7 +241,7 @@ module.exports = {
     data.append('state', process.env.OAUTH_STATE);
     return res.redirect(`${process.env[`${key.toUpperCase()}_OAUTH_URL`]}?${data.toString()}`);
   },
-  callback: async (req, res) => {
+  callback: async (req, res, next) => {
     const key = req.params.key;
     const code = req.query.code;
     const state = req.query.state;
@@ -294,29 +276,28 @@ module.exports = {
 
           let member = await Member.findOne({
             where: {
-              email: userInfo.data.email,
+              email: userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_FIELD_NAME`]],
             },
           });
           if (!member) {
-            const splitName = userInfo.data.name.split(' ');
             const createNewMember = {
-              email: userInfo.data.email,
+              email: userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_FIELD_NAME`]],
               password: crypto.randomBytes(32).toString('hex'),
               verify_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
             };
-            createNewMember[`${key}_id`] = userInfo.data.id;
+            createNewMember[`${key}_id`] = userInfo.data[process.env[`${key.toUpperCase()}_AUTH_ID_FIELD_NAME`]];
             if (key === 'facebook') {
               createNewMember.avatar = userInfo.data.picture.data.url;
             } else if (key === 'google') {
               createNewMember.avatar = userInfo.data.picture;
             }
-            member = await createMember(createNewMember, res);
+            member = await createMember(createNewMember, next);
           } else {
             if (!member.verify_at) {
               updateData.verify_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
             }
             if (!member[`${key}_id`]) {
-              updateData[`${key}_id`] = userInfo.data.id;
+              updateData[`${key}_id`] = userInfo.data[process.env[`${key.toUpperCase()}_AUTH_ID_FIELD_NAME`]];
             }
             if (!member.avatar) {
               if (key === 'facebook') {
@@ -327,9 +308,9 @@ module.exports = {
             }
           }
 
-          await updateMember(member.id, updateData, res);
+          await updateMember(member.id, updateData, next);
 
-          const accessToken = await newAccessToken(member.id, req, res);
+          const accessToken = await newAccessToken(member.id, req, next);
           return res.status(200).json({
             access_token: accessToken.access_token,
             refresh_token: newRefreshToken,
@@ -358,7 +339,7 @@ module.exports = {
           },
         });
         if (refresh) {
-          const accessToken = await newAccessToken(refresh.id, req, res);
+          const accessToken = await newAccessToken(refresh.id, req, next);
           return res.status(200).json({
             access_token: accessToken.access_token,
           });
@@ -381,7 +362,7 @@ module.exports = {
   updateProfile: async (req, res, next) => {
     const data = req.body;
     try {
-      await updateMember(req.user.id, data, res);
+      await updateMember(req.user.id, data, next);
     } catch (e) {
       e.message = 'Error: ' + e;
       next(e);
@@ -405,7 +386,7 @@ module.exports = {
         if (!data.password_created_at) {
           updateData.password_created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
         }
-        await updateMember(data.id, updateData, res);
+        await updateMember(data.id, updateData, next);
         return res.status(204).send();
       }
       return res.status(401).json({
@@ -435,7 +416,7 @@ module.exports = {
           }
         }
         const updateData = { avatar: newPath.replace('static', '') };
-        await updateMember(req.user.id, updateData, res);
+        await updateMember(req.user.id, updateData, next);
         return res.status(204).send();
       } catch (e) {
         if (req.file) {
@@ -468,7 +449,7 @@ module.exports = {
         refresh_token: null,
         refresh_token_expire_at: null,
       };
-      await updateMember(req.user.id, updateData, res);
+      await updateMember(req.user.id, updateData, next);
     } catch (e) {
       e.message = 'Error: ' + e;
       next(e);

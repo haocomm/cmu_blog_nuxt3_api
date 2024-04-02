@@ -53,20 +53,6 @@ const updateUser = async (id, data, res) => {
   }
 };
 
-const sendMail = async (to, subject, html) => {
-  try {
-    const mail = await mailer.sendMail({
-      from: `${process.env.APP_NAME} <${process.env.APP_EMAIL}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log(mail.messageId);
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 module.exports = {
   forgotPassword: async (req, res, next) => {
     const body = req.body;

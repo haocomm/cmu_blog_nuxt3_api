@@ -20,8 +20,6 @@ module.exports = {
         firstname: { type: Sequelize.STRING },
         lastname: { type: Sequelize.STRING },
         phone: { type: Sequelize.STRING },
-        facebook: { type: Sequelize.STRING },
-        line: { type: Sequelize.STRING },
         salt: {
           type: Sequelize.STRING,
         },

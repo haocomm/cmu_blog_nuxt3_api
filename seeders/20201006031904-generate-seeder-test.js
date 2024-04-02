@@ -1,5 +1,5 @@
 'use strict'
-const faker = require('faker')
+const { faker } = require('@faker-js/faker');
 const db = require('../models')
 const dayjs = require('dayjs')
 
