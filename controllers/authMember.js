@@ -241,8 +241,8 @@ module.exports = {
 
         const accessToken = await newAccessToken(req.user.id, req, next);
         return res.status(200).json({
-          access_token: accessToken.access_token,
-          refresh_token: newRefreshToken,
+          accessToken: accessToken.access_token,
+          refreshToken: newRefreshToken,
         });
       } catch (e) {
         e.message = "Error: " + e;
@@ -367,8 +367,8 @@ module.exports = {
 
           const accessToken = await newAccessToken(member.id, req, next);
           return res.status(200).json({
-            access_token: accessToken.access_token,
-            refresh_token: newRefreshToken,
+            accessToken: accessToken.access_token,
+            refreshToken: newRefreshToken,
           });
         } catch (e) {
           return res.status(401).json({
@@ -382,7 +382,7 @@ module.exports = {
     });
   },
   token: async (req, res, next) => {
-    const refreshToken = req.body.refresh_token;
+    const refreshToken = req.body.refreshToken;
     if (refreshToken) {
       try {
         const refresh = await Member.findOne({
@@ -396,7 +396,7 @@ module.exports = {
         if (refresh) {
           const accessToken = await newAccessToken(refresh.id, req, next);
           return res.status(200).json({
-            access_token: accessToken.access_token,
+            accessToken: accessToken.access_token,
           });
         }
       } catch (e) {
@@ -410,9 +410,7 @@ module.exports = {
     });
   },
   me: (req, res) => {
-    return res.status(200).json({
-      user: req.user,
-    });
+    return res.status(200).json(req.user);
   },
   updateProfile: async (req, res, next) => {
     const data = req.body;
