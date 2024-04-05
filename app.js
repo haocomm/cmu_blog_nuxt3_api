@@ -8,6 +8,7 @@ const routes = require('./routes');
 const logger = require('./config/logger');
 
 const port = process.env.PORT || 3000;
+const apiPath = process.env.API_PATH || '/api';
 
 const app = express();
 
@@ -21,7 +22,7 @@ app.use(
 );
 app.use(logger);
 
-app.use('/api/v1', routes);
+app.use(apiPath, routes);
 
 app.use(express.static('static'));
 
