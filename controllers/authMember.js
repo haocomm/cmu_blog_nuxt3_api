@@ -1,12 +1,12 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-const bcryptjs = require('bcryptjs');
-const dayjs = require('dayjs');
-const axios = require('axios');
-const sharp = require('sharp');
-const db = require('../models');
-const { MailVerify, MailResetPassword } = require('../config/mailer');
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const bcryptjs = require("bcryptjs");
+const dayjs = require("dayjs");
+const axios = require("axios");
+const sharp = require("sharp");
+const db = require("../models");
+const { MailVerify, MailResetPassword } = require("../config/mailer");
 
 const Op = db.Sequelize.Op;
 const Member = db.Member;
@@ -23,11 +23,15 @@ const findByVerifyToken = async (verifyToken, res, include = []) => {
   });
   return data;
 };
-const findByResetPasswordToken = async (passwordResetToken, res, include = []) => {
+const findByResetPasswordToken = async (
+  passwordResetToken,
+  res,
+  include = []
+) => {
   const where = {
     password_reset_token: passwordResetToken,
     password_reset_expire_at: {
-      [Op.gte]: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      [Op.gte]: dayjs().format("YYYY-MM-DD HH:mm:ss"),
     },
   };
   const data = await Member.findOne({
@@ -54,7 +58,7 @@ const createMember = async (data, next) => {
       });
     });
   } catch (e) {
-    e.message = 'Error: ' + e;
+    e.message = "Error: " + e;
     next(e);
   }
 };
@@ -74,7 +78,7 @@ const updateMember = async (id, data, next) => {
       );
     });
   } catch (e) {
-    e.message = 'Error: ' + e;
+    e.message = "Error: " + e;
     next(e);
   }
 };
@@ -84,7 +88,7 @@ const newAccessToken = async (memberId, req, next) => {
       return MemberAccessToken.create(
         {
           member_id: memberId,
-          ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+          ip: req.headers["x-forwarded-for"] || req.connection.remoteAddress,
         },
         {
           transaction: t,
@@ -92,17 +96,22 @@ const newAccessToken = async (memberId, req, next) => {
       );
     });
   } catch (e) {
-    e.message = 'Error: ' + e;
+    e.message = "Error: " + e;
     next(e);
   }
 };
 
 module.exports = {
-  signup: async (req, res,next) => {
+  signup: async (req, res, next) => {
     const data = req.body;
-    data.password_created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    data.password_created_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
     const newData = await createMember(data, next);
-    await MailVerify(newData.email, `${newData.firstname} ${newData.lastname}`, newData.verify_token, `${process.env.BASE_URL}/verify-email/`);
+    await MailVerify(
+      newData.email,
+      `${newData.firstname} ${newData.lastname}`,
+      newData.verify_token,
+      `${process.env.BASE_URL}/verify-email/`
+    );
     return res.status(201).json(newData);
   },
   resendVerify: async (req, res, next) => {
@@ -111,12 +120,18 @@ module.exports = {
       const data = await findByEmail(body.email, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
-      await MailVerify(data.email, `${data.firstname} ${data.lastname}`, data.verify_token, `${process.env.BASE_URL}/verify-email/`, true);
+      await MailVerify(
+        data.email,
+        `${data.firstname} ${data.lastname}`,
+        data.verify_token,
+        `${process.env.BASE_URL}/verify-email/`,
+        true
+      );
       return res.status(204).send();
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
@@ -126,15 +141,15 @@ module.exports = {
       const data = await findByVerifyToken(body.token, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
       const updateData = {
-        verify_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        verify_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       };
       await updateMember(data.id, updateData, next);
       return res.status(204).send();
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
@@ -144,18 +159,24 @@ module.exports = {
       const data = await findByEmail(body.email, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
-      const passwordResetToken = crypto.randomBytes(16).toString('hex');
+      const passwordResetToken = crypto.randomBytes(16).toString("hex");
       const updateData = {
         password_reset_token: passwordResetToken,
-        password_reset_expire_at: dayjs().add(15, 'minutes').format('YYYY-MM-DD HH:mm:ss'),
+        password_reset_expire_at: dayjs()
+          .add(15, "minutes")
+          .format("YYYY-MM-DD HH:mm:ss"),
       };
       await updateMember(data.id, updateData, next);
-      await MailResetPassword(data.email, passwordResetToken, `${process.env.BASE_URL}/reset-password/`);
+      await MailResetPassword(
+        data.email,
+        passwordResetToken,
+        `${process.env.BASE_URL}/reset-password/`
+      );
       return res.status(204).send();
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
@@ -165,11 +186,11 @@ module.exports = {
       const data = await findByResetPasswordToken(body.token, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
       return res.status(204).send();
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
@@ -180,24 +201,24 @@ module.exports = {
       const data = await findByResetPasswordToken(token, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
       const salt = bcryptjs.genSaltSync(10);
       const updateData = {
         salt,
         password: bcryptjs.hashSync(body.password, salt),
-        password_reset_expire_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        password_reset_expire_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       };
       if (!data.password_created_at) {
-        updateData.password_created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
+        updateData.password_created_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
       }
       if (!data.verify_at) {
-        updateData.verify_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
+        updateData.verify_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
       }
       await updateMember(data.id, updateData, next);
       return res.status(204).send();
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
@@ -206,13 +227,15 @@ module.exports = {
       try {
         if (!req.user.active) {
           return res.status(405).json({
-            message: 'Email is inactive',
+            message: "Email is inactive",
           });
         }
-        const newRefreshToken = crypto.randomBytes(32).toString('hex');
+        const newRefreshToken = crypto.randomBytes(32).toString("hex");
         const updateData = {
           refresh_token: newRefreshToken,
-          refresh_token_expire_at: dayjs().add(10, 'hours').format('YYYY-MM-DD HH:mm:ss'),
+          refresh_token_expire_at: dayjs()
+            .add(10, "hours")
+            .format("YYYY-MM-DD HH:mm:ss"),
         };
         await updateMember(req.user.id, updateData, next);
 
@@ -222,24 +245,29 @@ module.exports = {
           refresh_token: newRefreshToken,
         });
       } catch (e) {
-        e.message = 'Error: ' + e;
+        e.message = "Error: " + e;
         next(e);
       }
     } else {
       return res.status(403).json({
-        message: 'Forbidden, this email has not been verified.',
+        message: "Forbidden, this email has not been verified.",
       });
     }
   },
   oauth: (req, res) => {
     const key = req.params.key;
     const data = new URLSearchParams();
-    data.append('response_type', 'code');
-    data.append('client_id', process.env[`${key.toUpperCase()}_CLIENT_ID`]);
-    data.append('redirect_uri', `${process.env.BASE_URL}/auth?authclient=${key}`);
-    data.append('scope', process.env[`${key.toUpperCase()}_SCOPE`]);
-    data.append('state', process.env.OAUTH_STATE);
-    return res.redirect(`${process.env[`${key.toUpperCase()}_OAUTH_URL`]}?${data.toString()}`);
+    data.append("response_type", "code");
+    data.append("client_id", process.env[`${key.toUpperCase()}_CLIENT_ID`]);
+    data.append(
+      "redirect_uri",
+      `${process.env.BASE_URL}/auth?authclient=${key}`
+    );
+    data.append("scope", process.env[`${key.toUpperCase()}_SCOPE`]);
+    data.append("state", process.env.OAUTH_STATE);
+    return res.redirect(
+      `${process.env[`${key.toUpperCase()}_OAUTH_URL`]}?${data.toString()}`
+    );
   },
   callback: async (req, res, next) => {
     const key = req.params.key;
@@ -248,61 +276,88 @@ module.exports = {
     if (code && state) {
       if (state === process.env.OAUTH_STATE) {
         const data = new URLSearchParams();
-        data.append('code', code);
-        data.append('redirect_uri', `${process.env.BASE_URL}/auth?authclient=${key}`);
-        data.append('client_id', process.env[`${key.toUpperCase()}_CLIENT_ID`]);
-        data.append('client_secret', process.env[`${key.toUpperCase()}_CLIENT_SECRET`]);
-        data.append('grant_type', 'authorization_code');
+        data.append("code", code);
+        data.append(
+          "redirect_uri",
+          `${process.env.BASE_URL}/auth?authclient=${key}`
+        );
+        data.append("client_id", process.env[`${key.toUpperCase()}_CLIENT_ID`]);
+        data.append(
+          "client_secret",
+          process.env[`${key.toUpperCase()}_CLIENT_SECRET`]
+        );
+        data.append("grant_type", "authorization_code");
 
         try {
-          const oauthAccessToken = await axios.post(process.env[`${key.toUpperCase()}_GET_ACCESS_TOKEN_URL`], data, {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-          });
+          const oauthAccessToken = await axios.post(
+            process.env[`${key.toUpperCase()}_GET_ACCESS_TOKEN_URL`],
+            data,
+            {
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+            }
+          );
 
-          const userInfo = await axios.get(process.env[`${key.toUpperCase()}_GET_USER_INFO_URL`], {
-            headers: {
-              'content-type': 'application/json',
-              Authorization: `Bearer ${oauthAccessToken.data.access_token}`,
-            },
-          });
+          const userInfo = await axios.get(
+            process.env[`${key.toUpperCase()}_GET_USER_INFO_URL`],
+            {
+              headers: {
+                "content-type": "application/json",
+                Authorization: `Bearer ${oauthAccessToken.data.access_token}`,
+              },
+            }
+          );
 
-          const newRefreshToken = crypto.randomBytes(32).toString('hex');
+          const newRefreshToken = crypto.randomBytes(32).toString("hex");
           const updateData = {
             refresh_token: newRefreshToken,
-            refresh_token_expire_at: dayjs().add(10, 'hours').format('YYYY-MM-DD HH:mm:ss'),
+            refresh_token_expire_at: dayjs()
+              .add(10, "hours")
+              .format("YYYY-MM-DD HH:mm:ss"),
           };
 
           let member = await Member.findOne({
             where: {
-              email: userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_FIELD_NAME`]],
+              email:
+                userInfo.data[
+                  process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]
+                ],
             },
           });
           if (!member) {
             const createNewMember = {
-              email: userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_FIELD_NAME`]],
-              password: crypto.randomBytes(32).toString('hex'),
-              verify_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+              email:
+                userInfo.data[
+                  process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]
+                ],
+              password: crypto.randomBytes(32).toString("hex"),
+              verify_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
             };
-            createNewMember[`${key}_id`] = userInfo.data[process.env[`${key.toUpperCase()}_AUTH_ID_FIELD_NAME`]];
-            if (key === 'facebook') {
+            createNewMember[`${key}_id`] =
+              userInfo.data[
+                process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
+              ];
+            if (key === "facebook") {
               createNewMember.avatar = userInfo.data.picture.data.url;
-            } else if (key === 'google') {
+            } else if (key === "google") {
               createNewMember.avatar = userInfo.data.picture;
             }
             member = await createMember(createNewMember, next);
           } else {
             if (!member.verify_at) {
-              updateData.verify_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
+              updateData.verify_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
             }
             if (!member[`${key}_id`]) {
-              updateData[`${key}_id`] = userInfo.data[process.env[`${key.toUpperCase()}_AUTH_ID_FIELD_NAME`]];
+              updateData[`${key}_id`] =
+                userInfo.data[
+                  process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
+                ];
             }
             if (!member.avatar) {
-              if (key === 'facebook') {
+              if (key === "facebook") {
                 updateData.avatar = userInfo.data.picture.data.url;
-              } else if (key === 'google') {
+              } else if (key === "google") {
                 updateData.avatar = userInfo.data.picture;
               }
             }
@@ -317,13 +372,13 @@ module.exports = {
           });
         } catch (e) {
           return res.status(401).json({
-            message: 'Unauthorized' + e,
+            message: "Unauthorized" + e,
           });
         }
       }
     }
     return res.status(400).json({
-      message: 'Bad request',
+      message: "Bad request",
     });
   },
   token: async (req, res, next) => {
@@ -334,7 +389,7 @@ module.exports = {
           where: {
             refresh_token: refreshToken,
             refresh_token_expire_at: {
-              [Op.gte]: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+              [Op.gte]: dayjs().format("YYYY-MM-DD HH:mm:ss"),
             },
           },
         });
@@ -346,12 +401,12 @@ module.exports = {
         }
       } catch (e) {
         return res.status(401).json({
-          message: 'Unauthorized' + e,
+          message: "Unauthorized" + e,
         });
       }
     }
     return res.status(400).json({
-      message: 'Bad request',
+      message: "Bad request",
     });
   },
   me: (req, res) => {
@@ -364,7 +419,7 @@ module.exports = {
     try {
       await updateMember(req.user.id, data, next);
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
     return res.status(204).send();
@@ -375,32 +430,37 @@ module.exports = {
       const data = await findByEmail(req.user.email, res);
       if (!data)
         return res.status(404).json({
-          message: 'Not Found',
+          message: "Not Found",
         });
-      if (!data.password_created_at || (!!data.password_created_at && data.validPassword(body.old_password))) {
+      if (
+        !data.password_created_at ||
+        (!!data.password_created_at && data.validPassword(body.old_password))
+      ) {
         const salt = bcryptjs.genSaltSync(10);
         const updateData = {
           salt,
           password: bcryptjs.hashSync(body.password, salt),
         };
         if (!data.password_created_at) {
-          updateData.password_created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
+          updateData.password_created_at = dayjs().format(
+            "YYYY-MM-DD HH:mm:ss"
+          );
         }
         await updateMember(data.id, updateData, next);
         return res.status(204).send();
       }
       return res.status(401).json({
-        message: 'Unauthorized',
+        message: "Unauthorized",
       });
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
   },
   updateAvatar: async (req, res, next) => {
     if (req.file) {
       const { filename } = req.file;
-      const newFilename = filename.replace(/\.[^/.]+$/, '');
+      const newFilename = filename.replace(/\.[^/.]+$/, "");
       const newPath = path.join(req.file.destination, `${newFilename}.webp`);
       await sharp(req.file.path).resize(200).webp().toFile(newPath);
       fs.unlinkSync(req.file.path);
@@ -415,7 +475,7 @@ module.exports = {
             });
           }
         }
-        const updateData = { avatar: newPath.replace('static', '') };
+        const updateData = { avatar: newPath.replace("static", "") };
         await updateMember(req.user.id, updateData, next);
         return res.status(204).send();
       } catch (e) {
@@ -435,12 +495,12 @@ module.exports = {
             });
           }
         }
-        e.message = 'Error: ' + e;
+        e.message = "Error: " + e;
         next(e);
       }
     }
     return res.status(400).json({
-      message: 'Bad request',
+      message: "Bad request",
     });
   },
   logout: async (req, res, next) => {
@@ -451,7 +511,7 @@ module.exports = {
       };
       await updateMember(req.user.id, updateData, next);
     } catch (e) {
-      e.message = 'Error: ' + e;
+      e.message = "Error: " + e;
       next(e);
     }
     return res.status(204).send();
