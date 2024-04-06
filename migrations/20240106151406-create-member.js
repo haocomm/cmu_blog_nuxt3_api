@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface
-      .createTable('members', {
+      .createTable("members", {
         id: {
           allowNull: false,
           autoIncrement: true,
@@ -30,30 +30,22 @@ module.exports = {
           type: Sequelize.DATE,
         },
         avatar: {
-          type: Sequelize.STRING
-        },
-        facebook_id: {
-          type: Sequelize.STRING(191),
-          unique: true
-        },
-        google_id: {
-          type: Sequelize.STRING(191),
-          unique: true
+          type: Sequelize.STRING,
         },
         verify_token: {
-          type: Sequelize.STRING
+          type: Sequelize.STRING,
         },
         verify_at: {
-          type: Sequelize.DATE
+          type: Sequelize.DATE,
         },
         password_reset_token: {
-          type: Sequelize.STRING
+          type: Sequelize.STRING,
         },
         password_reset_expire_at: {
-          type: Sequelize.DATE
+          type: Sequelize.DATE,
         },
         password_created_at: {
-          type: Sequelize.DATE
+          type: Sequelize.DATE,
         },
         active: {
           type: Sequelize.BOOLEAN,
@@ -61,18 +53,18 @@ module.exports = {
         },
         createdAt: {
           allowNull: false,
-          field: 'created_at',
+          field: "created_at",
           type: Sequelize.DATE,
         },
         updatedAt: {
           allowNull: false,
-          field: 'updated_at',
+          field: "updated_at",
           type: Sequelize.DATE,
         },
       })
-      .then(() => queryInterface.addIndex('members', ['email']));
+      .then(() => queryInterface.addIndex("members", ["email"]));
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('members');
+    await queryInterface.dropTable("members");
   },
 };

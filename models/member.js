@@ -1,14 +1,17 @@
-'use strict';
-const { Model } = require('sequelize');
-const crypto = require('crypto');
-const bcryptjs = require('bcryptjs');
+"use strict";
+const { Model } = require("sequelize");
+const crypto = require("crypto");
+const bcryptjs = require("bcryptjs");
 
 module.exports = (sequelize, DataTypes) => {
   class Member extends Model {
     static associate(models) {
       this.hasMany(models.MemberAccessToken, {
-        foreignKey: 'member_id',
-      })
+        foreignKey: "member_id",
+      });
+      this.hasMany(models.AuthClient, {
+        foreignKey: "member_id",
+      });
     }
   }
   Member.init(
@@ -26,14 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       refresh_token: DataTypes.STRING,
       refresh_token_expire_at: DataTypes.DATE,
       avatar: DataTypes.STRING,
-      facebook_id: {
-        type: DataTypes.STRING,
-        unique: true,
-      },
-      google_id: {
-        type: DataTypes.STRING,
-        unique: true,
-      },
       verify_token: DataTypes.STRING,
       verify_at: DataTypes.DATE,
       password_reset_token: DataTypes.STRING,
@@ -44,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
       active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-      }
+      },
     },
     {
       hooks: {
@@ -52,18 +47,18 @@ module.exports = (sequelize, DataTypes) => {
           const salt = bcryptjs.genSaltSync(10);
           member.salt = salt;
           member.password = bcryptjs.hashSync(member.password, salt);
-          member.verify_token = crypto.randomBytes(16).toString('hex');
+          member.verify_token = crypto.randomBytes(16).toString("hex");
         },
       },
       sequelize,
       underscored: true,
-      tableName: 'members',
-      modelName: 'Member',
+      tableName: "members",
+      modelName: "Member",
     }
   );
   Member.inputSchema = {
-    email: 'required',
-    password: 'required',
+    email: "required",
+    password: "required",
   };
   Member.prototype.validPassword = function (password) {
     return bcryptjs.compareSync(password, this.password);

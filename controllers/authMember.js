@@ -10,6 +10,7 @@ const { MailVerify, MailResetPassword } = require("../config/mailer");
 
 const Op = db.Sequelize.Op;
 const Member = db.Member;
+const AuthClient = db.AuthClient;
 const MemberAccessToken = db.MemberAccessToken;
 
 const findByVerifyToken = async (verifyToken, res, include = []) => {
@@ -49,11 +50,33 @@ const findByEmail = async (email, res, include = []) => {
   });
   return data;
 };
+const findByAuthClient = async (memberId, authClient) => {
+  const data = await AuthClient.findOne({
+    where: {
+      member_id: memberId,
+      auth_client: authClient,
+    },
+  });
+  return data;
+};
 
-const createMember = async (data, next) => {
+const createMember = async (data, next, include = []) => {
   try {
     return await db.sequelize.transaction((t) => {
       return Member.create(data, {
+        include,
+        transaction: t,
+      });
+    });
+  } catch (e) {
+    e.message = "Error: " + e;
+    next(e);
+  }
+};
+const createAuthClient = async (data, next) => {
+  try {
+    return await db.sequelize.transaction((t) => {
+      return AuthClient.create(data, {
         transaction: t,
       });
     });
@@ -259,122 +282,126 @@ module.exports = {
     const data = new URLSearchParams();
     data.append("response_type", "code");
     data.append("client_id", process.env[`${key.toUpperCase()}_CLIENT_ID`]);
-    data.append(
-      "redirect_uri",
-      `${process.env.BASE_URL}/auth?authclient=${key}`
-    );
+    data.append("redirect_uri", `${process.env.BASE_URL}/auth/`);
     data.append("scope", process.env[`${key.toUpperCase()}_SCOPE`]);
-    data.append("state", process.env.OAUTH_STATE);
+    data.append("state", key);
     return res.redirect(
       `${process.env[`${key.toUpperCase()}_OAUTH_URL`]}?${data.toString()}`
     );
   },
   callback: async (req, res, next) => {
-    const key = req.params.key;
+    const key = req.query.state;
     const code = req.query.code;
-    const state = req.query.state;
-    if (code && state) {
-      if (state === process.env.OAUTH_STATE) {
-        const data = new URLSearchParams();
-        data.append("code", code);
-        data.append(
-          "redirect_uri",
-          `${process.env.BASE_URL}/auth?authclient=${key}`
+    if (code && key) {
+      const data = new URLSearchParams();
+      data.append("code", code);
+      data.append("redirect_uri", `${process.env.BASE_URL}/auth/`);
+      data.append("client_id", process.env[`${key.toUpperCase()}_CLIENT_ID`]);
+      data.append(
+        "client_secret",
+        process.env[`${key.toUpperCase()}_CLIENT_SECRET`]
+      );
+      data.append("grant_type", "authorization_code");
+
+      try {
+        const oauthAccessToken = await axios.post(
+          process.env[`${key.toUpperCase()}_GET_ACCESS_TOKEN_URL`],
+          data,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
         );
-        data.append("client_id", process.env[`${key.toUpperCase()}_CLIENT_ID`]);
-        data.append(
-          "client_secret",
-          process.env[`${key.toUpperCase()}_CLIENT_SECRET`]
+
+        const userInfo = await axios.get(
+          process.env[`${key.toUpperCase()}_GET_USER_INFO_URL`],
+          {
+            headers: {
+              "content-type": "application/json",
+              Authorization: `Bearer ${oauthAccessToken.data.access_token}`,
+            },
+          }
         );
-        data.append("grant_type", "authorization_code");
 
-        try {
-          const oauthAccessToken = await axios.post(
-            process.env[`${key.toUpperCase()}_GET_ACCESS_TOKEN_URL`],
-            data,
-            {
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
+        const newRefreshToken = crypto.randomBytes(32).toString("hex");
+        const updateData = {
+          refresh_token: newRefreshToken,
+          refresh_token_expire_at: dayjs()
+            .add(10, "hours")
+            .format("YYYY-MM-DD HH:mm:ss"),
+        };
+
+        let member = await Member.findOne({
+          where: {
+            email:
+              userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]],
+          },
+        });
+        if (!member) {
+          const createNewMember = {
+            email:
+              userInfo.data[process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]],
+            password: crypto.randomBytes(32).toString("hex"),
+            verify_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            AuthClients: [
+              {
+                auth_client: key,
+                auth_key:
+                  userInfo.data[
+                    process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
+                  ],
               },
-            }
-          );
-
-          const userInfo = await axios.get(
-            process.env[`${key.toUpperCase()}_GET_USER_INFO_URL`],
-            {
-              headers: {
-                "content-type": "application/json",
-                Authorization: `Bearer ${oauthAccessToken.data.access_token}`,
-              },
-            }
-          );
-
-          const newRefreshToken = crypto.randomBytes(32).toString("hex");
-          const updateData = {
-            refresh_token: newRefreshToken,
-            refresh_token_expire_at: dayjs()
-              .add(10, "hours")
-              .format("YYYY-MM-DD HH:mm:ss"),
+            ],
           };
 
-          let member = await Member.findOne({
-            where: {
-              email:
+          if (key === "facebook") {
+            createNewMember.avatar = userInfo.data.picture.data.url;
+          } else if (key === "google") {
+            createNewMember.avatar = userInfo.data.picture;
+          }
+          member = await createMember(createNewMember, next, [AuthClient]);
+        } else {
+          const findAuthClient = await findByAuthClient(member.id, key);
+          if (!findAuthClient) {
+            await createAuthClient({
+              member_id: member.id,
+              auth_client: key,
+              auth_key:
                 userInfo.data[
-                  process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]
+                  process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
                 ],
-            },
-          });
-          if (!member) {
-            const createNewMember = {
-              email:
-                userInfo.data[
-                  process.env[`${key.toUpperCase()}_EMAIL_PROPERTY`]
-                ],
-              password: crypto.randomBytes(32).toString("hex"),
-              verify_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            };
-            createNewMember[`${key}_id`] =
+            });
+          }
+          if (!member.verify_at) {
+            updateData.verify_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
+          }
+          if (!member[`${key}_id`]) {
+            updateData[`${key}_id`] =
               userInfo.data[
                 process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
               ];
+          }
+          if (!member.avatar) {
             if (key === "facebook") {
-              createNewMember.avatar = userInfo.data.picture.data.url;
+              updateData.avatar = userInfo.data.picture.data.url;
             } else if (key === "google") {
-              createNewMember.avatar = userInfo.data.picture;
-            }
-            member = await createMember(createNewMember, next);
-          } else {
-            if (!member.verify_at) {
-              updateData.verify_at = dayjs().format("YYYY-MM-DD HH:mm:ss");
-            }
-            if (!member[`${key}_id`]) {
-              updateData[`${key}_id`] =
-                userInfo.data[
-                  process.env[`${key.toUpperCase()}_AUTH_ID_PROPERTY`]
-                ];
-            }
-            if (!member.avatar) {
-              if (key === "facebook") {
-                updateData.avatar = userInfo.data.picture.data.url;
-              } else if (key === "google") {
-                updateData.avatar = userInfo.data.picture;
-              }
+              updateData.avatar = userInfo.data.picture;
             }
           }
-
-          await updateMember(member.id, updateData, next);
-
-          const accessToken = await newAccessToken(member.id, req, next);
-          return res.status(200).json({
-            accessToken: accessToken.access_token,
-            refreshToken: newRefreshToken,
-          });
-        } catch (e) {
-          return res.status(401).json({
-            message: "Unauthorized" + e,
-          });
         }
+
+        await updateMember(member.id, updateData, next);
+
+        const accessToken = await newAccessToken(member.id, req, next);
+        return res.status(200).json({
+          accessToken: accessToken.access_token,
+          refreshToken: newRefreshToken,
+        });
+      } catch (e) {
+        return res.status(401).json({
+          message: "Unauthorized" + e,
+        });
       }
     }
     return res.status(400).json({
