@@ -355,8 +355,6 @@ module.exports = {
             ],
           };
 
-          console.log("userInfo", userInfo);
-
           if (key === "facebook") {
             createNewMember.avatar = userInfo.data.picture.data.url;
             if (
