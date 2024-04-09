@@ -355,10 +355,51 @@ module.exports = {
             ],
           };
 
+          console.log("userInfo", userInfo);
+
           if (key === "facebook") {
             createNewMember.avatar = userInfo.data.picture.data.url;
+            if (
+              !!userInfo.data.name &&
+              userInfo.data.name.split(" ").length === 2
+            ) {
+              createNewMember.firstname = userInfo.data.name.split(" ")[0];
+              createNewMember.lastname = userInfo.data.name.split(" ")[1];
+            } else {
+              createNewMember.firstname = userInfo.data.name;
+            }
           } else if (key === "google") {
             createNewMember.avatar = userInfo.data.picture;
+            if (!!userInfo.data.given_name && !!userInfo.data.family_name) {
+              createNewMember.firstname = userInfo.data.given_name;
+              createNewMember.lastname = userInfo.data.family_name;
+            } else if (
+              !!userInfo.data.name &&
+              userInfo.data.name.split(" ").length === 2
+            ) {
+              createNewMember.firstname = userInfo.data.name.split(" ")[0];
+              createNewMember.lastname = userInfo.data.name.split(" ")[1];
+            } else {
+              createNewMember.firstname = userInfo.data.name;
+            }
+          } else if (key === "cmu") {
+            createNewMember.firstname = userInfo.data.firstname_EN;
+            createNewMember.lastname = userInfo.data.lastname_EN;
+          } else if (key === "m365") {
+            if (!!userInfo.data.givenName && !!userInfo.data.surname) {
+              createNewMember.firstname = userInfo.data.givenName;
+              createNewMember.lastname = userInfo.data.surname;
+            } else if (
+              !!userInfo.data.displayName &&
+              userInfo.data.displayName.split(" ").length === 2
+            ) {
+              createNewMember.firstname =
+                userInfo.data.displayName.split(" ")[0];
+              createNewMember.lastname =
+                userInfo.data.displayName.split(" ")[1];
+            } else {
+              createNewMember.firstname = userInfo.data.displayName;
+            }
           }
           member = await createMember(createNewMember, next, [AuthClient]);
         } else {
