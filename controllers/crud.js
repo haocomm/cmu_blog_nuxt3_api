@@ -39,11 +39,14 @@ module.exports = {
       };
     }
     try {
-      if (Number.parseInt(size) === -1) {
-        const lists = await Crud.findAll({ where });
-        return res.json(lists);
-      }
-      const { limit, offset } = db.getPagination(page, size);
+      // if (Number.parseInt(size) === -1) {
+      //   const lists = await Crud.findAll({ where });
+      //   return res.json(lists);
+      // }
+      const { limit, offset } = db.getPagination(
+        page,
+        Number.parseInt(size) === -1 ? 10000 : size
+      );
       const lists = await Crud.findAndCountAll({
         where,
         limit,
