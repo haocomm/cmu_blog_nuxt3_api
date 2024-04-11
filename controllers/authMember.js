@@ -465,6 +465,9 @@ module.exports = {
             accessToken: accessToken.access_token,
           });
         }
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
       } catch (e) {
         return res.status(401).json({
           message: "Unauthorized" + e,
