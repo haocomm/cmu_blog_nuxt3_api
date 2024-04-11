@@ -12,6 +12,9 @@ module.exports = (sequelize, DataTypes) => {
       this.hasMany(models.AuthClient, {
         foreignKey: "member_id",
       });
+      this.hasMany(models.Blog, {
+        foreignKey: "member_id",
+      });
     }
   }
   Member.init(
