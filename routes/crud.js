@@ -23,5 +23,6 @@ router.put(
   crudController.update
 );
 router.delete(`${path}/:id`, checkParamId, crudController.destroy);
+router.post(`${path}/delete`, checkBody, crudController.deletes);
 
 module.exports = router;

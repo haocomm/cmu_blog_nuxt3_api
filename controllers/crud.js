@@ -117,4 +117,14 @@ module.exports = {
       next(e);
     }
   },
+  deletes: async (req, res, next) => {
+    const data = req.body;
+    try {
+      await Crud.destroy({ where: { id: data.ids } });
+      return res.status(204).send();
+    } catch (e) {
+      e.message = "Cannot remove data from database.";
+      next(e);
+    }
+  },
 };
