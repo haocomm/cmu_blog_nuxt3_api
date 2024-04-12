@@ -70,7 +70,7 @@ router.post(`${path}/token`, checkBody, authMemberController.token);
 
 router.delete(
   `${path}/logout`,
-  passport.authenticate("bearer-member", { session: false }),
+  passport.authenticate("bearer-member-logout", { session: false }),
   authMemberController.logout
 );
 

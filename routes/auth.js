@@ -11,7 +11,7 @@ const path = '/auth'
 router.post(`${path}/login`, passport.authenticate('local', { session: false }), authController.login)
 router.get(`${path}/me`, passport.authenticate('bearer', { session: false }), authController.me)
 router.post(`${path}/token`, checkBody, authController.token)
-router.delete(`${path}/logout`, passport.authenticate('bearer', { session: false }), authController.logout)
+router.delete(`${path}/logout`, passport.authenticate('bearer-logout', { session: false }), authController.logout)
 
 router.post(`${path}/update-profile`, passport.authenticate('bearer', { session: false }), checkBody, authController.updateProfile)
 router.post(`${path}/update-password`, passport.authenticate('bearer', { session: false }), checkBody, authController.updatePassword)
