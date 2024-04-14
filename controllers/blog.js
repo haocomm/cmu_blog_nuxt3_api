@@ -5,6 +5,7 @@ const { file, model } = require("../helpers");
 const Op = db.Sequelize.Op;
 const Blog = db.Blog;
 const Img = db.Img;
+const Member = db.Member;
 
 module.exports = {
   inputValidate: async (req, res, next) => {
