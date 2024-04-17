@@ -167,15 +167,15 @@ module.exports = {
   },
   removeImage: async (req, res, next) => {
     const id = req.params.id;
-    const data = req.body;
-    data.img_id = null;
     const oldData = await model.findByPk(Blog, id, res);
     try {
       const oldImg = await oldData.getImg();
       oldImg.destroy();
       await db.sequelize.transaction(async (t) => {
         return await Blog.update(
-          data,
+          {
+            img_id: null,
+          },
           {
             where: {
               id,
@@ -186,7 +186,7 @@ module.exports = {
           }
         );
       });
-      return res.json(data);
+      return res.status(204).send();
     } catch (e) {
       e.message = "Cannot update data from database.";
       next(e);

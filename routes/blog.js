@@ -32,8 +32,6 @@ router.put(
   `${path}/:id/remove-image`,
   passport.authenticate("bearer-member", { session: false }),
   checkParamId,
-  checkBody,
-  blogController.inputValidate,
   blogController.removeImage
 );
 router.delete(
