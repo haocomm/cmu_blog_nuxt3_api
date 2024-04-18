@@ -1,4 +1,4 @@
-FROM node:12.20.1-alpine3.10
+FROM node:18-alpine3.18
 
 ENV TZ=Asia/Bangkok
 
