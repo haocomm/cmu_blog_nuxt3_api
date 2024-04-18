@@ -8,5 +8,3 @@ services:
     restart: always
     env_file:
       - .env
-    volumes:
-      - "/home/cnoc/docker_sync_resource/${APP_NAME}/posts:/app/static/uploads/posts"
