@@ -1,0 +1,12 @@
+version: "3.4"
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "${DOCKER_FORWARD_PORT}:5000"
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - "/home/cnoc/docker_sync_resource/${APP_NAME}/posts:/app/static/uploads/posts"
