@@ -18,7 +18,7 @@ $ nano .env
 
 # Migrate your database
 #(require global "npx" if not, please install $ npm install -g npx )
-$ npx sequelize db:migrate
+$ npx sequelize-cli db:migrate
 ```
 
 ## Build Setup
